@@ -41,9 +41,9 @@ class Comment2Telegram_Action extends Typecho_Widget implements Widget_Interface
      */
     public function setWebhook () {
         if ($_POST['mode'] == 1) {
-            $addUrl = (($GLOBALS['options']->rewrite) ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=' . $GLOBALS['route']['Add'];
-            $delUrl = (($GLOBALS['options']->rewrite) ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=' . $GLOBALS['route']['Del'];
-            $markUrl = (($GLOBALS['options']->rewrite) ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=' . $GLOBALS['route']['Mark'];
+            $addUrl = ($GLOBALS['options']->rewrite ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=' . $GLOBALS['route']['Add'];
+            $delUrl = ($GLOBALS['options']->rewrite ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=' . $GLOBALS['route']['Del'];
+            $markUrl = ($GLOBALS['options']->rewrite ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=' . $GLOBALS['route']['Mark'];
 
             $text = <<< EOF
 评论添加： {$addUrl}
@@ -64,18 +64,18 @@ EOF;
             $re = curl_exec ($ch);
             curl_close ($ch);
             exit (json_encode (array ('code' => 0)));
-        } else {
-            $newurl = (($GLOBALS['options']->rewrite) ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=CallBack';
-            $ret = json_decode (Bootstrap::fetch ('https://api.telegram.org/bot' . $_POST['token'] . '/setWebhook', [
-                'url' => $newurl
-            ], 'POST'), true);
-    
-            if ($ret['ok'] == true) {
-                exit (json_encode (array ('code' => 0)));
-            } else {
-                exit (json_encode (array ('code' => -1, 'msg' => $ret['description'])));
-            }
         }
+
+        $newurl = ($GLOBALS['options']->rewrite ? $GLOBALS['options']->siteUrl : $GLOBALS['options']->siteUrl . 'index.php/') . 'action/CommentEdit?do=CallBack';
+        $ret = json_decode (Bootstrap::fetch ('https://api.telegram.org/bot' . $_POST['token'] . '/setWebhook', [
+            'url' => $newurl
+        ], 'POST'), true);
+
+        if ($ret['ok'] == true) {
+            exit (json_encode (array ('code' => 0)));
+        }
+
+        exit (json_encode (array ('code' => -1, 'msg' => $ret['description'])));
     }
     
     /**
@@ -87,14 +87,14 @@ EOF;
         if ($this->_cfg->mode != 0) {
             exit (json_encode (array ('code' => -1, 'msg' => '模式')));
         }
-        $data = json_decode (file_get_contents ("php://input"), true);
+        $data = json_decode (file_get_contents ('php://input'), true);
         if (empty($data)) {
             exit (json_encode (array ('code' => -1, 'msg' => '参数为空')));
         }
         
         $reply_to_message = $data['message']['reply_to_message']['text'];
-        if (isset($reply_to_message) && strpos($reply_to_message, "中说到: ") !== false) {
-            preg_match('/(.+?) 在 "(.+?)"\(\#(\d+)\) 中说到: \n> ([\s\S]+?) \(\#(\d+)\)/', $reply_to_message, $match);
+        if (isset($reply_to_message) && strpos($reply_to_message, '中说到: ') !== false) {
+            preg_match('(/(.+?) 在 "(.+?)"\(\#(\d+)\) 中说到: \n> ([\s\S]+?) \(\#(\d+)\)/)u', $reply_to_message, $match);
             $CommentData = [
                 'cid' => $match[3],
                 'author' => $data['message']['chat']['username'],
@@ -110,11 +110,11 @@ EOF;
         }
         
         $callback_query = $data['callback_query'];
-        if (isset ($callback_query) && isset($callback_query['data'])) {
+        if (isset($callback_query, $callback_query['data'])) {
             $callbackExplode = explode ('_', $callback_query['data']);
             if (isset ($callbackExplode[1])) {
                 $coid = $callbackExplode[1];
-                if ($callbackExplode[0] == 'delete') {
+                if ($callbackExplode[0] === 'delete') {
                     $CommentData = [
                         'coid' => $coid
                     ];
@@ -124,7 +124,7 @@ EOF;
                     } else {
                         $GLOBALS['telegramModel']->editMessage ($callback_query['message']['chat']['id'], $callback_query['message']['message_id'], '删除失败');
                     }
-                } else if ($callbackExplode[0] == 'spam') {
+                } else if ($callbackExplode[0] === 'spam') {
                     $CommentData = [
                         'coid' => $coid,
                         'status' => 'spam'
@@ -149,7 +149,7 @@ EOF;
                     } else {
                         $GLOBALS['telegramModel']->sendMessage ($callback_query['message']['chat']['id'], '标记垃圾评论失败');
                     }
-                } else if ($callbackExplode[0] == 'approved') {
+                } else if ($callbackExplode[0] === 'approved') {
                     $CommentData = [
                         'coid' => $coid,
                         'status' => 'approved'
@@ -189,7 +189,7 @@ EOF;
             $text = $data['text'];
             $parent = $data['parent'];
         } else {
-            if (!isset($_POST['cid']) || !isset($_POST['author']) || !isset($_POST['text']) || !isset($_POST['parent'])) {
+            if (!isset($_POST['cid'], $_POST['author'], $_POST['text'], $_POST['parent'])) {
                 exit (json_encode (array ('code' => -1, 'msg' => '原地爆炸，螺旋升天')));
             }
             $cid = $_POST['cid'];
@@ -216,7 +216,7 @@ EOF;
 
             $ContentInfo = $this->getContentInfo($cid);
             $CommentInfo = $this->getCommentInfo($parent);
-            if (isset($ContentInfo) && isset($CommentInfo)) {
+            if (isset($ContentInfo, $CommentInfo)) {
                 $search  = array(
                     '{siteTitle}',
                     '{siteURL}',
@@ -248,16 +248,16 @@ EOF;
             }
             if ($this->_cfg->mode == 0) {
                 return array('code' => 0);
-            } else {
-                exit (json_encode(array('code' => 0)));
             }
-        } else {
-            if ($this->_cfg->mode == 0) {
-                return array('code' => -2, 'msg' => '不允许此操作');
-            } else {
-                exit (json_encode(array('code' => -2, 'msg' => '不允许此操作')));
-            }
+
+            exit (json_encode(array('code' => 0)));
         }
+
+        if ($this->_cfg->mode == 0) {
+            return array('code' => -2, 'msg' => '不允许此操作');
+        }
+
+        exit (json_encode(array('code' => -2, 'msg' => '不允许此操作')));
     }
     
     public function CommentDel ($data = NULL) {
@@ -281,9 +281,9 @@ EOF;
         
         if ($this->_cfg->mode == 0) {
             return array('code' => 0);
-        } else {
-            exit (json_encode(array('code' => 0)));
         }
+
+        exit (json_encode(array('code' => 0)));
     }
     
     public function CommentMark ($data = NULL) {
@@ -294,7 +294,7 @@ EOF;
             $coid = $data['coid'];
             $status = $data['status'];
         } else {
-            if (!isset($_POST['coid']) || !isset($_POST['status'])) {
+            if (!isset($_POST['coid'], $_POST['status'])) {
                 exit (json_encode (array ('code' => -1, 'msg' => '原地爆炸，螺旋升天')));
             }
             $coid = $_POST['coid'];
@@ -305,16 +305,16 @@ EOF;
         if ($ret) {
             if ($this->_cfg->mode == 0) {
                 return array('code' => 0);
-            } else {
-                exit (json_encode(array('code' => 0)));
             }
-        } else {
-            if ($this->_cfg->mode == 0) {
-                return array('code' => -3, 'msg' => '标记失败');
-            } else {
-                exit (json_encode(array('code' => -3, 'msg' => '标记失败')));
-            }
+
+            exit (json_encode(array('code' => 0)));
         }
+
+        if ($this->_cfg->mode == 0) {
+            return array('code' => -3, 'msg' => '标记失败');
+        }
+
+        exit (json_encode(array('code' => -3, 'msg' => '标记失败')));
     }
     
     /**
@@ -326,12 +326,16 @@ EOF;
     private function is_https () {
         if (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') {
             return TRUE;
-        } elseif (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-            return TRUE;
-        } elseif (!empty($_SERVER['HTTP_FRONT_END_HTTPS']) && strtolower($_SERVER['HTTP_FRONT_END_HTTPS']) !== 'off') {
+        }
+
+        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
             return TRUE;
         }
-    
+
+        if (!empty($_SERVER['HTTP_FRONT_END_HTTPS']) && strtolower($_SERVER['HTTP_FRONT_END_HTTPS']) !== 'off') {
+            return TRUE;
+        }
+
         return FALSE;
     }
 
@@ -358,10 +362,10 @@ EOF;
             $this->_db->query($this->_db->update('table.comments')->rows(array('status' => $status))->where('coid = ?', $coid));
             
             /** 更新相关内容的评论数 */
-            if ('approved' == $comment['status'] && 'approved' != $status) {
+            if ('approved' === $comment['status'] && 'approved' !== $status) {
                 $this->_db->query($this->_db->update('table.contents')
                 ->expression('commentsNum', 'commentsNum - 1')->where('cid = ? AND commentsNum > 0', $comment['cid']));
-            } else if ('approved' != $comment['status'] && 'approved' == $status) {
+            } else if ('approved' !== $comment['status'] && 'approved' === $status) {
                 $this->_db->query($this->_db->update('table.contents')
                 ->expression('commentsNum', 'commentsNum + 1')->where('cid = ?', $comment['cid']));
             }

@@ -10,7 +10,7 @@
         private function fetch ($url, $postdata = null) {
             $ch = curl_init ();
             curl_setopt ($ch, CURLOPT_URL, $url);
-            if (!is_null ($postdata)) {
+            if ($postdata !== null) {
                 curl_setopt ($ch, CURLOPT_POSTFIELDS, http_build_query ($postdata));
             }
             curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -37,22 +37,20 @@
             $ret = json_decode ($this->fetch ($url, $param), true);
             
             /** 分析结果 */
-            if ($ret['ok'] == false && $detection == true) {
-                if ($ret['error_code'] != 400 && $ret['error_code'] != 403) {
-                    $url = 'https://api.telegram.org/bot' . TOKEN . '/sendMessage';
-                    $postdata = [
-                        'chat_id' => $maser,
-                        'text' => $text
-                    ];
-                    
-                    $ch = curl_init ();
-                    curl_setopt ($ch, CURLOPT_URL, $url);
-                    curl_setopt ($ch, CURLOPT_POSTFIELDS, $postdata);
-                    curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
-                    $re = curl_exec ($ch);
-                    curl_close ($ch);
-                }
+            if ($ret['ok'] == false && $detection == true && $ret['error_code'] != 400 && $ret['error_code'] != 403) {
+                $url = 'https://api.telegram.org/bot' . TOKEN . '/sendMessage';
+                $postdata = [
+                    'chat_id' => $maser,
+                    'text' => $text
+                ];
+
+                $ch = curl_init ();
+                curl_setopt ($ch, CURLOPT_URL, $url);
+                curl_setopt ($ch, CURLOPT_POSTFIELDS, $postdata);
+                curl_setopt ($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt ($ch, CURLOPT_RETURNTRANSFER, true);
+                $re = curl_exec ($ch);
+                curl_close ($ch);
             }
             
             /** 返回 */
