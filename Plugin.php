@@ -18,22 +18,22 @@ class Comment2Telegram_Plugin implements Typecho_Plugin_Interface {
      * @throws Typecho_Plugin_Exception
      */
     public static function activate() {
-        if (false == self::isWritable(dirname(__FILE__))) {
+        if (false === self::isWritable(__DIR__)) {
             throw new Typecho_Plugin_Exception(_t('对不起，插件目录不可写，无法正常使用此功能'));
         }
         
         Typecho_Plugin::factory('Widget_Feedback')->finishComment = array('Comment2Telegram_Plugin', 'commentSend');
         Typecho_Plugin::factory('Widget_Comments_Edit')->finishComment = array('Comment2Telegram_Plugin', 'commentSend');
-        Helper::addAction("CommentEdit", "Comment2Telegram_Action");
+        Helper::addAction('CommentEdit', 'Comment2Telegram_Action');
         
-        Bootstrap::fetch ("https://api.aim.moe/Counter/Plugin", [
+        Bootstrap::fetch ('https://api.aim.moe/Counter/Plugin', [
             'siteName' => $GLOBALS['options']->title,
             'siteUrl' => $GLOBALS['options']->siteUrl,
             'plugin' => 'Comment2Telegram',
             'version' => Plugin_Const::VERSION
         ], 'POST');
         
-        return _t('请配置此插件的 Token 和 Telergam Master ID, 以使您的 Telegram 推送生效');
+        return _t('请配置此插件的 Token 和 Telegram Master ID, 以使您的 Telegram 推送生效');
     }
     
     /**
@@ -45,11 +45,11 @@ class Comment2Telegram_Plugin implements Typecho_Plugin_Interface {
      * @throws Typecho_Plugin_Exception
      */
     public static function deactivate() {
-        Helper::removeAction("CommentEdit");
+        Helper::removeAction('CommentEdit');
 
-        $data = Bootstrap::fetch ("https://api.aim.moe/Counter/Plugin?siteName=" . $GLOBALS['options']->title . '&siteUrl=' . $GLOBALS['options']->siteUrl . '&plugin=Comment2Telegram');
+        $data = Bootstrap::fetch ('https://api.aim.moe/Counter/Plugin?siteName=' . $GLOBALS['options']->title . '&siteUrl=' . $GLOBALS['options']->siteUrl . '&plugin=Comment2Telegram');
         $data = json_decode ($data, true);
-        Bootstrap::fetch ("https://api.aim.moe/Counter/Plugin/" . $data[0]->pid, 'DELETE');
+        Bootstrap::fetch ('https://api.aim.moe/Counter/Plugin/' . $data[0]->pid, 'DELETE');
     }
     
     /**
@@ -61,7 +61,7 @@ class Comment2Telegram_Plugin implements Typecho_Plugin_Interface {
      */
     public static function config (Typecho_Widget_Helper_Form $form) {
 
-        $lversion = json_decode(Bootstrap::fetch (Plugin_Const::GITHUB_REPO_API))->tag_name;
+        $lversion = json_decode(Bootstrap::fetch(Plugin_Const::GITHUB_REPO_API), true)->tag_name;
     	if ($lversion > Plugin_Const::VERSION){	
     		echo '<p style="font-size:18px;">你正在使用 <a>' . Plugin_Const::VERSION . '</a> 版本的 Comment2Telegram，最新版本为 <a style="color:red;">' . $lversion . '</a><a href="https://github.com/MoeLoli/Comment2Telegram"><button type="submit" class="btn btn-warn" style="margin-left:10px;">前往更新</button></a></p>';	
     	} else {	
@@ -71,7 +71,7 @@ class Comment2Telegram_Plugin implements Typecho_Plugin_Interface {
         $form->addInput($Mode->addRule('enum', _t('必须选择一个模式'), array(0, 1)));
         $Token = new Typecho_Widget_Helper_Form_Element_Text('Token', NULL, NULL, _t('Token'), _t('需要输入指定Token'));
         $form->addInput($Token->addRule('required', _t('您必须填写一个正确的Token')));
-        $MasterID = new Typecho_Widget_Helper_Form_Element_Text('MasterID', NULL, NULL, _t('MasterID'), _t('Telergam Master ID'));
+        $MasterID = new Typecho_Widget_Helper_Form_Element_Text('MasterID', NULL, NULL, _t('MasterID'), _t('Telegram Master ID'));
         $form->addInput($MasterID->addRule('required', _t('您必须填写一个正确的 Telegram ID')));
         echo '<style>.typecho-option-submit button[type="submit"]{display:none!important}</style><script>window.onload=function(){$(".typecho-option-submit li").append("<div class=\"description\"><button class=\"btn primary\" id=\"save\">保存设置</button></div>");$("input[name=mode]").change(function(){if($(this).val()==1){$(".description").append("<div class=\"outDeal\">保存后将会往你的 TG 中发送接口信息</div>")}else if($(this).val()==0){if($(".outDeal").length>0){$(".outDeal").remove()}}});$("button#save").click(function(){var b=$(this),a=$(b).text();$(b).attr("disabled","disabled");if($("input[name=Token]").val()==""){$(b).text("请填写Bot Token");setTimeout(function(){$(b).text(a);$(b).removeAttr("disabled")},2000);return}if($("input[name=MasterID]").val()==""){$(b).text("请填写Bot Token");setTimeout(function(){$(b).text(a);$(b).removeAttr("disabled")},2000);return}$.ajax({type:"POST",url:window.location.origin+"/action/CommentEdit?do=setWebhook",dataType:"json",data:{mode:$("input[name=mode]:checked").val(),token:$("input[name=Token]").val(),master:$("input[name=Master]").val()},success:function(d,e,c){if(d.code=="0"){$(b).text("已 Reset Webhook");setTimeout(function(){$(b).text("正在保存设置");$(".typecho-option-submit button[type=\"submit\"]").click()},2000)}else{$(b).text("失败："+d.msg)}}})})}</script>';
     }
@@ -124,22 +124,20 @@ class Comment2Telegram_Plugin implements Typecho_Plugin_Interface {
     public static function isWritable($file) {
         if (is_dir($file)) {
             $dir = $file;
-            if ($fp = @fopen("$dir/check_writable", 'w')) {
+            if ($fp = @fopen("$dir/check_writable", 'wb')) {
                 @fclose($fp);
                 @unlink("$dir/check_writable");
-                $writeable = true;
+                $writable = true;
             } else {
-                $writeable = false;
+                $writable = false;
             }
+        } else if ($fp = @fopen($file, 'ab+')) {
+            @fclose($fp);
+            $writable = true;
         } else {
-            if ($fp = @fopen($file, 'a+')) {
-                @fclose($fp);
-                $writeable = true;
-            } else {
-                $writeable = false;
-            }
+            $writable = false;
         }
 
-        return $writeable;
+        return $writable;
     }
 }
